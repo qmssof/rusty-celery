@@ -24,6 +24,7 @@
 use crate::broker::{
     broker_builder_from_url, build_and_connect, configure_task_routes, BrokerBuilder,
 };
+use crate::app::{CeleryQueue};
 use crate::routing::{self, Rule};
 use crate::{
     error::{BeatError, BrokerError},
@@ -54,7 +55,7 @@ struct Config {
     broker_connection_max_retries: u32,
     broker_connection_retry_delay: u32,
     default_queue: String,
-    task_routes: Vec<(String, String)>,
+    task_routes: Vec<(String, CeleryQueue)>,
     task_options: TaskOptions,
     max_sleep_duration: Option<Duration>,
 }
@@ -181,7 +182,7 @@ where
         let broker_builder = self
             .config
             .broker_builder
-            .declare_queue(&self.config.default_queue);
+            .declare_queue(CeleryQueue::new((*self.config.default_queue).to_string()));
 
         let (broker_builder, task_routes) =
             configure_task_routes(broker_builder, &self.config.task_routes)?;

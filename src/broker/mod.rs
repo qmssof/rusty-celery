@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use futures::Stream;
 use log::error;
 use tokio::time::{self, Duration};
-
+use crate::app::{CeleryQueue};
 use crate::error::BrokerError;
 use crate::{
     protocol::{Message, TryDeserializeMessage},
@@ -111,7 +111,7 @@ pub trait BrokerBuilder: Send + Sync {
     fn prefetch_count(self: Box<Self>, prefetch_count: u16) -> Box<dyn BrokerBuilder>;
 
     /// Declare a queue.
-    fn declare_queue(self: Box<Self>, name: &str) -> Box<dyn BrokerBuilder>;
+    fn declare_queue(self: Box<Self>, queue: CeleryQueue) -> Box<dyn BrokerBuilder>;
 
     /// Set the heartbeat.
     fn heartbeat(self: Box<Self>, heartbeat: Option<u16>) -> Box<dyn BrokerBuilder>;
@@ -135,16 +135,15 @@ pub(crate) fn broker_builder_from_url(broker_url: &str) -> Box<dyn BrokerBuilder
 /// A utility function to configure the task routes on a broker builder.
 pub(crate) fn configure_task_routes(
     mut broker_builder: Box<dyn BrokerBuilder>,
-    task_routes: &[(String, String)],
+    task_routes: &[(String, CeleryQueue)],
 ) -> Result<(Box<dyn BrokerBuilder>, Vec<Rule>), BrokerError> {
     let mut rules: Vec<Rule> = Vec::with_capacity(task_routes.len());
     for (pattern, queue) in task_routes {
-        let rule = Rule::new(pattern, queue)?;
+        let rule = Rule::new(pattern, queue.name)?;
         rules.push(rule);
         // Ensure all other queues mentioned in task_routes are declared to the broker.
-        broker_builder = broker_builder.declare_queue(queue);
+        broker_builder = broker_builder.declare_queue(queue.clone());
     }
-
     Ok((broker_builder, rules))
 }
 
