@@ -126,7 +126,7 @@ impl BrokerBuilder for AMQPBrokerBuilder {
     }
 
     /// Declare a queue, and instantiate any exchanges.
-    fn declare_queue(mut self, queue: CeleryQueue) -> Self {
+    fn declare_queue(mut self: Box<Self>, queue: CeleryQueue) -> Box<dyn BrokerBuilder> {
         self.config.queues.insert(
             queue.name,
             QueueDeclareOptions {

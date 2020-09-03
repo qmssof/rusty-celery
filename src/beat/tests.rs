@@ -8,6 +8,7 @@ use crate::{
     broker::mock::*,
     task::{Request, TaskOptions, TaskResult},
 };
+use crate::app::{CeleryQueue};
 use async_trait::async_trait;
 use std::cell::RefCell;
 use std::rc::Rc;

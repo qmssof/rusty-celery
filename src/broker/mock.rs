@@ -3,6 +3,7 @@
 use super::{Broker, BrokerBuilder, Delivery, DeliveryStream};
 use crate::error::{BrokerError, ProtocolError};
 use crate::protocol::{Message, TryDeserializeMessage};
+use crate::app::CeleryQueue;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::{
@@ -31,7 +32,7 @@ impl BrokerBuilder for MockBrokerBuilder {
     }
 
     #[allow(unused)]
-    fn declare_queue(self: Box<Self>, name: &str) -> Box<dyn BrokerBuilder> {
+    fn declare_queue(self: Box<Self>, queue: CeleryQueue) -> Box<dyn BrokerBuilder> {
         self
     }
 

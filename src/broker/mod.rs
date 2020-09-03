@@ -139,7 +139,7 @@ pub(crate) fn configure_task_routes(
 ) -> Result<(Box<dyn BrokerBuilder>, Vec<Rule>), BrokerError> {
     let mut rules: Vec<Rule> = Vec::with_capacity(task_routes.len());
     for (pattern, queue) in task_routes {
-        let rule = Rule::new(pattern, queue.name)?;
+        let rule = Rule::new(pattern, queue.name.as_str())?;
         rules.push(rule);
         // Ensure all other queues mentioned in task_routes are declared to the broker.
         broker_builder = broker_builder.declare_queue(queue.clone());

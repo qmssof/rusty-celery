@@ -6,6 +6,7 @@ use crate::protocol::Delivery;
 use crate::protocol::DeliveryInfo;
 use crate::protocol::Message;
 use crate::protocol::TryDeserializeMessage;
+use crate::app::CeleryQueue;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::Stream;
@@ -59,8 +60,8 @@ impl BrokerBuilder for RedisBrokerBuilder {
     }
 
     /// Declare a queue.
-    fn declare_queue(mut self: Box<Self>, name: &str) -> Box<dyn BrokerBuilder> {
-        self.config.queues.insert(name.into());
+    fn declare_queue(mut self: Box<Self>, queue: CeleryQueue) -> Box<dyn BrokerBuilder> {
+        self.config.queues.insert(queue.name.into());
         self
     }
 
