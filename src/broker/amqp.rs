@@ -18,8 +18,8 @@ use std::task::Poll;
 use tokio::sync::{Mutex, RwLock};
 
 use super::{Broker, BrokerBuilder, DeliveryError, DeliveryStream};
+use crate::app::CeleryQueue;
 use crate::error::{BrokerError, ProtocolError};
-use crate::app::{CeleryQueue};
 use crate::protocol::{Message, MessageHeaders, MessageProperties, TryDeserializeMessage};
 use tokio_executor_trait::Tokio as TokioExecutor;
 

@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use futures::Stream;
 use log::error;
 use tokio::time::{self, Duration};
-use crate::app::{CeleryQueue};
+use crate::app::CeleryQueue;
 use crate::error::BrokerError;
 use crate::{
     protocol::{Message, TryDeserializeMessage},
