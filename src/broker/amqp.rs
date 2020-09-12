@@ -81,7 +81,7 @@ impl Stream for Consumer {
 struct Config {
     broker_url: String,
     prefetch_count: u16,
-    queues: HashMap<String, QueueDeclareOptions>,
+    queues: Vec<CeleryQueue>,
     heartbeat: Option<u16>,
 }
 
@@ -112,7 +112,7 @@ impl BrokerBuilder for AMQPBrokerBuilder {
             config: Config {
                 broker_url: broker_url.into(),
                 prefetch_count: 10,
-                queues: HashMap::new(),
+                queues: Vec::new(),
                 heartbeat: Some(60),
             },
         }
@@ -125,28 +125,9 @@ impl BrokerBuilder for AMQPBrokerBuilder {
         self
     }
 
-    /// Declare a queue, and instantiate any exchanges.
+    ///  
     fn declare_queue(mut self: Box<Self>, queue: CeleryQueue) -> Box<dyn BrokerBuilder> {
-        match queue.options { 
-            Some(config) => { 
-                self.config.queues.insert(
-                   queue.name,
-                   config 
-                );
-            },
-            None => { 
-                self.config.queues.insert(
-                    queue.name,
-                    QueueDeclareOptions {
-                        passive: false,
-                        durable: true,
-                        exclusive: false,
-                        auto_delete: false,
-                        nowait: false,
-                    },
-                );
-            }
-        };
+        self.config.queues.push(queue);
         self
     }
 
@@ -169,11 +150,26 @@ impl BrokerBuilder for AMQPBrokerBuilder {
         let produce_channel = conn.create_channel().await?;
 
         let mut queues: HashMap<String, Queue> = HashMap::new();
-        for (queue_name, queue_options) in &self.config.queues {
-            let queue = consume_channel
-                .queue_declare(queue_name, *queue_options, FieldTable::default())
-                .await?;
-            queues.insert(queue_name.into(), queue);
+        let mut queue_options: HashMap<String, QueueDeclareOptions> = HashMap::new();
+  
+        for queue in &self.config.queues { 
+            queues.insert(
+                queue.name.clone(),
+                consume_channel
+                .queue_declare(
+                    &queue.name.clone(),
+                    queue.options.unwrap(),
+                    FieldTable::default()
+                ).await?);
+            
+            queue_options.insert(
+                queue.name.clone(),
+                queue.get_options()
+            );
+            match &queue.exchange { 
+                Some(x) => x.declare(&consume_channel).await?,
+                None => continue
+            }
         }
 
         let broker = AMQPBroker {
@@ -182,7 +178,7 @@ impl BrokerBuilder for AMQPBrokerBuilder {
             consume_channel: RwLock::new(consume_channel),
             produce_channel: RwLock::new(produce_channel),
             queues: RwLock::new(queues),
-            queue_declare_options: self.config.queues.clone(),
+            queue_declare_options: queue_options,
             prefetch_count: Mutex::new(self.config.prefetch_count),
         };
         broker
