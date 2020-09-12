@@ -16,7 +16,8 @@ use tokio::time::{self, Duration};
 use tokio_stream::StreamMap;
 
 mod trace;
-
+use lapin::{ExchangeKind};
+use lapin::options::{QueueDeclareOptions};
 use crate::broker::{
     broker_builder_from_url, build_and_connect, configure_task_routes, Broker, BrokerBuilder,
     Delivery,
@@ -228,15 +229,10 @@ impl CeleryBuilder {
     }
 }
 
-/// Exchange Settings for a Celery Queue
+
+/// Exchange Options for an exchange associated with a Celery Queue.
 #[derive(Clone)]
-pub struct ExchangeOptions {
-    /// Name of the exchange.
-    exchange: String,
-
-    /// Key used for message routing.
-    routing_key: String,
-
+pub struct ExchangeOptions { 
     /// If true, the server will not create the queue and instead the client can assert
     /// whether the queue exists.
     passive: bool,
@@ -253,6 +249,32 @@ pub struct ExchangeOptions {
 
     /// If true, queue's do not wait for a reply.
     nowait: bool,
+
+    /// Exchange Kind Type.
+    kind: ExchangeKind
+}
+
+impl ExchangeOptions { 
+    /// Builds a QueueDeclareOptions from the given Exchange Options.
+    pub fn build_queue_options(&self) -> QueueDeclareOptions { 
+        QueueDeclareOptions { 
+            passive: self.passive,
+            durable: self.durable,
+            exclusive: self.exclusive,
+            auto_delete: self.auto_delete,
+            nowait: self.nowait,
+        }
+    }
+}
+
+/// Exchange for a Celery Queue
+#[derive(Clone)]
+pub struct Exchange {
+    /// Name of the exchange.
+    name: String,
+    /// Key used for message routing.
+    routing_key: String, 
+    options: ExchangeOptions
 }
 
 /// A 'CeleryQueue' is used to declare a queue that can be used in conjunction with a Celery app
@@ -261,27 +283,38 @@ pub struct ExchangeOptions {
 pub struct CeleryQueue {
     /// Human-readable name for the queue.
     pub name: String,
-    pub options: Option<ExchangeOptions>,
+    pub options: Option<QueueDeclareOptions>,
+    pub exchange: Option<Exchange>
 }
 
 impl CeleryQueue {
     /// Creates a new CeleryQueue alongside an exchange with defaults.
     pub fn new(name: String) -> Self {
-        let options = Some(ExchangeOptions {
-            exchange: "".into(),
-            routing_key: name.clone(),
+        let exchange_options = ExchangeOptions {
             passive: false,
             durable: true,
             exclusive: false,
             auto_delete: false,
             nowait: false,
+            kind: ExchangeKind::Direct,
+        };
+        let options = exchange_options.build_queue_options();
+        let exchange = Some(Exchange { 
+            name: "".into(),
+            routing_key: name.clone(),
+            options: exchange_options,
         });
-        Self { name, options }
+        Self { name, options: Some(options), exchange }
     }
 
-    /// Set's exchange settings for a given CeleryQueue.
-    pub fn options(mut self, opts: ExchangeOptions) -> Self {
+    /// Set's exchange options for a given CeleryQueue.
+    pub fn options(mut self, opts: QueueDeclareOptions) -> Self {
         self.options = Some(opts);
+        self
+    }
+    /// Set's exchange for a given CeleryQueue.
+    pub fn exchange(mut self, exch: Exchange) -> Self { 
+        self.exchange = Some(exch);
         self
     }
 }
@@ -290,7 +323,14 @@ impl From<&str> for CeleryQueue {
     fn from(input: &str) -> Self {
         Self {
             name: String::from(input),
-            options: None,
+            options: Some(QueueDeclareOptions {
+                passive: false,
+                durable: true,
+                exclusive: false,
+                auto_delete: false,
+                nowait: false,
+            }),
+            exchange: None 
         }
     }
 }
