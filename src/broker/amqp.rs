@@ -10,15 +10,14 @@ use lapin::options::{
 };
 use lapin::types::{AMQPValue, FieldArray, FieldTable};
 use lapin::uri::{self, AMQPUri};
-use lapin::{BasicProperties, Channel, Connection, ConnectionProperties, Queue};
+use lapin::{BasicProperties, Channel, Connection, ConnectionProperties};
 use log::debug;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::task::Poll;
 use tokio::sync::{Mutex, RwLock};
 
-use super::{Broker, BrokerBuilder, DeliveryError, DeliveryStream};
-use crate::app::CeleryQueue;
+use super::{Broker, BrokerBuilder, DeliveryError, DeliveryStream, Queue};
 use crate::error::{BrokerError, ProtocolError};
 use crate::protocol::{Message, MessageHeaders, MessageProperties, TryDeserializeMessage};
 use tokio_executor_trait::Tokio as TokioExecutor;
@@ -81,7 +80,7 @@ impl Stream for Consumer {
 struct Config {
     broker_url: String,
     prefetch_count: u16,
-    queues: Vec<CeleryQueue>,
+    queues: Vec<Queue>,
     heartbeat: Option<u16>,
 }
 
@@ -126,7 +125,7 @@ impl BrokerBuilder for AMQPBrokerBuilder {
     }
 
     /// Declare a queue to process during broker build time.  
-    fn declare_queue(mut self: Box<Self>, queue: CeleryQueue) -> Box<dyn BrokerBuilder> {
+    fn declare_queue(mut self: Box<Self>, queue: Queue) -> Box<dyn BrokerBuilder> {
         self.config.queues.push(queue);
         self
     }
@@ -149,7 +148,7 @@ impl BrokerBuilder for AMQPBrokerBuilder {
         let consume_channel = conn.create_channel().await?;
         let produce_channel = conn.create_channel().await?;
 
-        let mut queues: HashMap<String, Queue> = HashMap::new();
+        let mut queues: HashMap<String, lapin::Queue> = HashMap::new();
         let mut queue_options: HashMap<String, QueueDeclareOptions> = HashMap::new();
   
         for queue in &self.config.queues { 
@@ -208,7 +207,7 @@ pub struct AMQPBroker {
     /// Mapping of queue name to Queue struct.
     ///
     /// This is only wrapped in RwLock for interior mutability.
-    queues: RwLock<HashMap<String, Queue>>,
+    queues: RwLock<HashMap<String, lapin::Queue>>,
 
     queue_declare_options: HashMap<String, QueueDeclareOptions>,
 

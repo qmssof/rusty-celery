@@ -1,9 +1,8 @@
 //! Defines mock broker that can be used to test other components that rely on a broker.
 
-use super::{Broker, BrokerBuilder, Delivery, DeliveryStream};
+use super::{Broker, BrokerBuilder, Delivery, DeliveryStream, Queue};
 use crate::error::{BrokerError, ProtocolError};
 use crate::protocol::{Message, TryDeserializeMessage};
-use crate::app::CeleryQueue;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::{
@@ -32,7 +31,7 @@ impl BrokerBuilder for MockBrokerBuilder {
     }
 
     #[allow(unused)]
-    fn declare_queue(self: Box<Self>, queue: CeleryQueue) -> Box<dyn BrokerBuilder> {
+    fn declare_queue(self: Box<Self>, queue: Queue) -> Box<dyn BrokerBuilder> {
         self
     }
 

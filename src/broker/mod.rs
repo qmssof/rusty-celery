@@ -6,7 +6,9 @@ use chrono::{DateTime, Utc};
 use futures::Stream;
 use log::error;
 use tokio::time::{self, Duration};
-use crate::app::CeleryQueue;
+use lapin::options::{QueueDeclareOptions, ExchangeDeclareOptions};
+use lapin::{ExchangeKind, Channel};
+use lapin::types::FieldTable;
 use crate::error::BrokerError;
 use crate::{
     protocol::{Message, TryDeserializeMessage},
@@ -111,7 +113,7 @@ pub trait BrokerBuilder: Send + Sync {
     fn prefetch_count(self: Box<Self>, prefetch_count: u16) -> Box<dyn BrokerBuilder>;
 
     /// Declare a queue.
-    fn declare_queue(self: Box<Self>, queue: CeleryQueue) -> Box<dyn BrokerBuilder>;
+    fn declare_queue(self: Box<Self>, queue: Queue) -> Box<dyn BrokerBuilder>;
 
     /// Set the heartbeat.
     fn heartbeat(self: Box<Self>, heartbeat: Option<u16>) -> Box<dyn BrokerBuilder>;
@@ -135,7 +137,7 @@ pub(crate) fn broker_builder_from_url(broker_url: &str) -> Box<dyn BrokerBuilder
 /// A utility function to configure the task routes on a broker builder.
 pub(crate) fn configure_task_routes(
     mut broker_builder: Box<dyn BrokerBuilder>,
-    task_routes: &[(String, CeleryQueue)],
+    task_routes: &[(String, Queue)],
 ) -> Result<(Box<dyn BrokerBuilder>, Vec<Rule>), BrokerError> {
     let mut rules: Vec<Rule> = Vec::with_capacity(task_routes.len());
     for (pattern, queue) in task_routes {
@@ -183,3 +185,98 @@ pub(crate) async fn build_and_connect(
         BrokerError::NotConnected
     })
 }
+
+
+/// Exchange for a Celery Queue
+#[derive(Clone)]
+pub struct Exchange {
+    /// Name of the exchange.
+    name: String,
+    /// Key used for message routing.
+    routing_key: String, 
+    /// Exchange Kind Type.
+    kind: ExchangeKind,
+    /// Options for a given exchange.
+    options: ExchangeDeclareOptions
+}
+impl Exchange { 
+    pub async fn declare(&self, channel: &Channel) -> Result<(), lapin::Error> { 
+       channel.exchange_declare(
+            &self.name,
+            self.kind.clone(),
+            self.options,
+            FieldTable::default()
+       ).await
+    }
+}
+
+/// A 'Queue' is used to declare a queue that can be used in conjunction with a Celery app
+/// for task routing.
+#[derive(Clone)]
+pub struct Queue {
+    /// Human-readable name for the queue.
+    pub name: String,
+    /// A set of custom options for the given queue. 
+    pub options: Option<QueueDeclareOptions>,
+    /// A custom exchange for the custom queue. 
+    pub exchange: Option<Exchange>
+}
+
+impl Queue {
+    /// Creates a new Celery Queue and default options. 
+    pub fn new(name: String) -> Self {
+        let options = QueueDeclareOptions {
+            passive: false,
+            durable: true,
+            exclusive: false,
+            auto_delete: false,
+            nowait: false,
+        };
+        Self { name: name, options: Some(options), exchange: None }
+    }
+
+    /// Retrieves the current set of options from the queue.
+    pub fn get_options(&self) -> QueueDeclareOptions { 
+        match self.options { 
+            Some(x) => x,
+            None => { 
+                QueueDeclareOptions {
+                passive: false,
+                durable: true,
+                exclusive: false,
+                auto_delete: false,
+                nowait: false,
+                }
+            }
+        }
+    }
+
+    /// Set's exchange options for a given Queue.
+    pub fn options(mut self, opts: QueueDeclareOptions) -> Self {
+        self.options = Some(opts);
+        self
+    }
+    /// Set's exchange for a given Queue.
+    pub fn exchange(mut self, exch: Exchange) -> Self { 
+        self.exchange = Some(exch);
+        self
+    }
+}
+
+impl From<&str> for Queue {
+    /// Convert from string into a Celery Queue.
+    fn from(input: &str) -> Self {
+        Self {
+            name: String::from(input),
+            options: Some(QueueDeclareOptions {
+                passive: false,
+                durable: true,
+                exclusive: false,
+                auto_delete: false,
+                nowait: false,
+            }),
+            exchange: None 
+        }
+    }
+}
+

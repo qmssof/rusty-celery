@@ -1,12 +1,11 @@
 //! Redis broker.
 #![allow(dead_code)]
-use super::{Broker, BrokerBuilder, DeliveryError, DeliveryStream};
+use super::{Broker, BrokerBuilder, DeliveryError, DeliveryStream, Queue};
 use crate::error::{BrokerError, ProtocolError};
 use crate::protocol::Delivery;
 use crate::protocol::DeliveryInfo;
 use crate::protocol::Message;
 use crate::protocol::TryDeserializeMessage;
-use crate::app::CeleryQueue;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::Stream;
@@ -60,7 +59,7 @@ impl BrokerBuilder for RedisBrokerBuilder {
     }
 
     /// Declare a queue.
-    fn declare_queue(mut self: Box<Self>, queue: CeleryQueue) -> Box<dyn BrokerBuilder> {
+    fn declare_queue(mut self: Box<Self>, queue: Queue) -> Box<dyn BrokerBuilder> {
         self.config.queues.insert(queue.name.into());
         self
     }

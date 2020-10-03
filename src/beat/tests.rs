@@ -5,10 +5,9 @@
 /// are written to have a tolerance of at least 10 milliseconds.
 use super::*;
 use crate::{
-    broker::mock::*,
+    broker::{Queue, mock::*},
     task::{Request, TaskOptions, TaskResult},
 };
-use crate::app::{CeleryQueue};
 use async_trait::async_trait;
 use std::cell::RefCell;
 use std::rc::Rc;
