@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Skip warning about redis heartbeat when not necessary.
 
+## v0.5.3-rc1 - 2023-08-17
+
+### Added
+
+- Added a `Queue` struct for instantiating custom queues.
+- Added an `Exchange` struct for declaring exchanges.
+
 ## [v0.5.3](https://github.com/rusty-celery/rusty-celery/releases/tag/v0.5.3) - 2023-02-28
 
 ### Fixed
