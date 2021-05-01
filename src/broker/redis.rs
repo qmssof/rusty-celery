@@ -60,7 +60,7 @@ impl BrokerBuilder for RedisBrokerBuilder {
 
     /// Declare a queue.
     fn declare_queue(mut self: Box<Self>, queue: Queue) -> Box<dyn BrokerBuilder> {
-        self.config.queues.insert(queue.name.into());
+        self.config.queues.insert(queue.name);
         self
     }
 
