@@ -59,8 +59,8 @@ async fn test_with_options_and_trailing_comma() {
     .await
     .unwrap();
 }
-/*
-#[test]
+
+#[tokio::test]
 fn test_with_empty_queues_keywords() {
     let _app = celery::app!(
         broker = AMQP { std::env::var("AMQP_ADDR").unwrap() },
@@ -69,4 +69,3 @@ fn test_with_empty_queues_keywords() {
         queues=vec![]
     );
 }
-*/
