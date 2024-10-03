@@ -229,6 +229,7 @@ where
                 #[cfg(any(test, feature = "extra_content_types"))]
                 "application/x-msgpack" => rmp_serde::to_vec(&body)?,
                 _ => {
+                    log::error!("Unknown content type: {}", self.message.properties.content_type);
                     return Err(ProtocolError::BodySerializationError(
                         ContentTypeError::Unknown,
                     ));
@@ -264,7 +265,7 @@ impl Message {
         match self.properties.content_type.as_str() {
             "application/json" => {
                 let value: Value = from_slice(&self.raw_body)?;
-                debug!("Deserialized message body: {:?}", value);
+                log::info!("Deserialized message body: {}", value);
                 if let Value::Array(ref vec) = value {
                     if let [Value::Array(ref args), Value::Object(ref kwargs), Value::Object(ref embed)] =
                         vec[..]
@@ -410,9 +411,12 @@ impl Message {
                 }
                 Ok(from_value(value)?)
             }
-            _ => Err(ProtocolError::BodySerializationError(
-                ContentTypeError::Unknown,
-            )),
+            _ => {
+                log::error!("Error deserializing Message body: {:?}", self.raw_body);
+                Err(ProtocolError::BodySerializationError(
+                    ContentTypeError::Unknown,
+                ))
+            },
         }
     }
 

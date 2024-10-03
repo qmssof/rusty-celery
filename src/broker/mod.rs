@@ -187,16 +187,16 @@ pub(crate) async fn build_and_connect(
 }
 
 /// Exchange message router that can be used alongside a queue.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Exchange {
     /// Name of the exchange.
-    name: String,
+    pub name: String,
     /// Key used for message routing.
-    routing_key: String,
+    pub routing_key: String,
     /// Exchange Kind Type.
-    kind: ExchangeKind,
+    pub kind: ExchangeKind,
     /// Options for a given exchange.
-    options: ExchangeDeclareOptions,
+    pub options: ExchangeDeclareOptions,
 }
 impl Exchange {
     /// Instantiates an exchange for use alongside a provided channel.

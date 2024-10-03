@@ -6,7 +6,7 @@ use futures::Stream;
 use lapin::message::Delivery;
 use lapin::options::{
     BasicAckOptions, BasicCancelOptions, BasicConsumeOptions, BasicPublishOptions, BasicQosOptions,
-    QueueDeclareOptions,
+    QueueDeclareOptions, QueueBindOptions,
 };
 use lapin::types::{AMQPValue, FieldArray, FieldTable};
 use lapin::uri::{self, AMQPUri};
@@ -152,6 +152,7 @@ impl BrokerBuilder for AMQPBrokerBuilder {
         let mut queue_options: HashMap<String, QueueDeclareOptions> = HashMap::new();
 
         for queue in &self.config.queues {
+            log::debug!("Declaring Queue {}: {:?}", queue.name, queue.options);
             queues.insert(
                 queue.name.clone(),
                 consume_channel
@@ -165,7 +166,19 @@ impl BrokerBuilder for AMQPBrokerBuilder {
 
             queue_options.insert(queue.name.clone(), queue.get_options());
             match &queue.exchange {
-                Some(exchange) => exchange.declare(&consume_channel).await?,
+                Some(exchange) => {
+                    log::debug!("Declaring Exchange {}: {:?}", exchange.name, exchange);
+                    exchange.declare(&consume_channel).await?;
+                    consume_channel.queue_bind(
+                        &queue.name,
+                        &exchange.name,
+                        &exchange.routing_key,
+                        QueueBindOptions {
+                            nowait: queue.options.unwrap().nowait
+                        },
+                        FieldTable::default()
+                    ).await?;
+                },
                 None => continue,
             }
         }

@@ -160,7 +160,7 @@ impl CeleryBuilder {
     }
 
     /// Add a routing rule.
-    pub fn task_route(mut self, pattern: &str, queue: &str) -> Self {
+    pub fn task_route<Q: Into<Queue>>(mut self, pattern: &str, queue: Q) -> Self {
         self.config.task_routes.push((pattern.into(), queue.into()));
         self
     }
@@ -371,6 +371,7 @@ impl Celery {
         let message = match delivery.try_deserialize_message() {
             Ok(message) => message,
             Err(e) => {
+                log::error!("Got protocol error: {e}");
                 // This is a naughty message that we can't handle, so we'll ack it with
                 // the broker so it gets deleted.
                 self.broker
